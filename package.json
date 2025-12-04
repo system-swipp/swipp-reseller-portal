@@ -1,0 +1,35 @@
+{
+  "name": "swipp-reseller-portal",
+  "version": "1.0.0",
+  "description": "WeWeb reseller portal component for Swipp - manage events, bookings, and availability",
+  "main": "ww-config.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/system-swipp/swipp-reseller-portal.git"
+  },
+  "keywords": [
+    "weweb",
+    "reseller",
+    "portal",
+    "booking",
+    "supabase",
+    "events"
+  ],
+  "author": "Swipp <system@swipp.no>",
+  "license": "MIT",
+  "scripts": {
+    "serve": "weweb serve",
+    "build": "weweb build",
+    "test": "npm run build"
+  },
+  "devDependencies": {
+    "@weweb/cli": "latest",
+    "vue": "^3.3.0"
+  },
+  "peerDependencies": {
+    "vue": "^3.0.0"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0"
+  }
+}
