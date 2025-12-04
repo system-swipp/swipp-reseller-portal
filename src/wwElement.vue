@@ -62,8 +62,8 @@
       <div class="tab-content">
         <!-- TAB 1: Event Settings -->
         <div v-if="activeTab === 'settings'" class="tab-panel">
-          <div class="settings-grid">
-            <!-- Availability Settings Card -->
+          <div class="settings-grid-4">
+            <!-- TOP LEFT: Availability Settings Card -->
             <div class="settings-card">
               <h3 class="card-title">
                 <span class="card-icon">📅</span>
@@ -72,7 +72,7 @@
 
               <div v-if="!availability" class="empty-state">
                 <p>Du har ikke satt opp tilgjengelighet ennå.</p>
-                <button @click="showAvailabilityModal = true" class="btn btn-primary">
+                <button @click="showAvailabilityModal = true" class="btn btn-confirm">
                   Sett opp tilgjengelighet
                 </button>
               </div>
@@ -106,59 +106,24 @@
               </div>
             </div>
 
-            <!-- Locations Card -->
+            <!-- TOP RIGHT: Exceptions Card -->
             <div class="settings-card">
               <h3 class="card-title">
-                <span class="card-icon">📍</span>
-                Lokasjoner
-              </h3>
-
-              <p class="card-description">
-                Velg hvilke lokasjoner som skal knyttes til dine events.
-              </p>
-
-              <div class="locations-list">
-                <label
-                  v-for="location in allLocations"
-                  :key="location.id"
-                  class="location-checkbox"
-                >
-                  <input
-                    type="checkbox"
-                    :checked="isLocationSelected(location.id)"
-                    @change="toggleLocation(location.id)"
-                  />
-                  <span class="checkbox-label">{{ location.location_name }}</span>
-                </label>
-              </div>
-
-              <button
-                @click="saveLocations"
-                :disabled="savingLocations"
-                class="btn btn-primary"
-              >
-                {{ savingLocations ? 'Lagrer...' : 'Lagre lokasjoner' }}
-              </button>
-            </div>
-
-            <!-- Exceptions Card -->
-            <div class="settings-card full-width">
-              <h3 class="card-title">
                 <span class="card-icon">🚫</span>
-                Unntak (Ferie, sykdom, etc.)
+                Utilgjengelige tider
               </h3>
 
               <p class="card-description">
                 Legg til perioder hvor du ikke er tilgjengelig.
               </p>
 
-              <div v-if="exceptions.length === 0" class="empty-state">
-                <p>Ingen unntak registrert.</p>
+              <div v-if="activeExceptions.length === 0" class="empty-state">
+                <p>Ingen aktive unntak.</p>
               </div>
 
               <div v-else class="exceptions-list">
                 <div
-                  v-for="exception in exceptions"
+                  v-for="exception in activeExceptions"
                   :key="exception.id"
                   class="exception-item"
                 >
@@ -178,6 +143,87 @@
 
               <button @click="showExceptionModal = true" class="btn btn-secondary">
                 + Legg til unntak
+              </button>
+            </div>
+
+            <!-- BOTTOM LEFT: Locations Card -->
+            <div class="settings-card">
+              <h3 class="card-title">
+                <span class="card-icon">📍</span>
+                Lokasjoner
+              </h3>
+
+              <p class="card-description">
+                Velg hvilke lokasjoner som skal knyttes til dine events.
+              </p>
+
+              <div class="locations-list">
+                <label
+                  v-for="location in companyLocations"
+                  :key="location.id"
+                  :class="['location-checkbox', { 'locked': isDefaultLocation(location.id) }]"
+                >
+                  <input
+                    type="checkbox"
+                    :checked="isLocationSelected(location.id)"
+                    :disabled="isDefaultLocation(location.id)"
+                    @change="toggleLocation(location.id)"
+                  />
+                  <span class="checkbox-label">
+                    {{ location.location_name }}
+                    <span v-if="isDefaultLocation(location.id)" class="locked-badge">Standard</span>
+                  </span>
+                </label>
+              </div>
+
+              <button
+                @click="saveLocations"
+                :disabled="savingLocations"
+                class="btn btn-confirm"
+              >
+                {{ savingLocations ? 'Lagrer...' : 'Lagre lokasjoner' }}
+              </button>
+            </div>
+
+            <!-- BOTTOM RIGHT: CC Colleagues Card -->
+            <div class="settings-card">
+              <h3 class="card-title">
+                <span class="card-icon">👥</span>
+                Kollegaer på kopi
+              </h3>
+
+              <p class="card-description">
+                Velg hvilke kollegaer som skal få kopi av bookingvarsler.
+              </p>
+
+              <div v-if="colleagues.length === 0" class="empty-state">
+                <p>Ingen kollegaer funnet i din bedrift.</p>
+              </div>
+
+              <div v-else class="colleagues-list">
+                <label
+                  v-for="colleague in colleagues"
+                  :key="colleague.id"
+                  class="colleague-checkbox"
+                >
+                  <input
+                    type="checkbox"
+                    :checked="isColleagueSelected(colleague.id)"
+                    @change="toggleColleague(colleague.id)"
+                  />
+                  <span class="checkbox-label">
+                    {{ colleague.first_name }} {{ colleague.last_name }}
+                    <span class="colleague-email">{{ colleague.email }}</span>
+                  </span>
+                </label>
+              </div>
+
+              <button
+                @click="saveCcResellers"
+                :disabled="savingCcResellers"
+                class="btn btn-confirm"
+              >
+                {{ savingCcResellers ? 'Lagrer...' : 'Lagre CC-valg' }}
               </button>
             </div>
           </div>
@@ -457,9 +503,9 @@
             </label>
           </div>
         </div>
-        <div class="modal-footer">
+        <div class="modal-footer modal-footer-centered">
           <button @click="showAvailabilityModal = false" class="btn btn-secondary">Avbryt</button>
-          <button @click="saveAvailability" :disabled="savingAvailability" class="btn btn-primary">
+          <button @click="saveAvailability" :disabled="savingAvailability" class="btn btn-confirm">
             {{ savingAvailability ? 'Lagrer...' : 'Lagre' }}
           </button>
         </div>
@@ -516,9 +562,9 @@
             />
           </div>
         </div>
-        <div class="modal-footer">
+        <div class="modal-footer modal-footer-centered">
           <button @click="showExceptionModal = false" class="btn btn-secondary">Avbryt</button>
-          <button @click="saveException" :disabled="savingException" class="btn btn-primary">
+          <button @click="saveException" :disabled="savingException" class="btn btn-confirm">
             {{ savingException ? 'Lagrer...' : 'Lagre' }}
           </button>
         </div>
@@ -559,9 +605,9 @@
             </label>
           </div>
         </div>
-        <div class="modal-footer">
+        <div class="modal-footer modal-footer-centered">
           <button @click="showEventModal = false" class="btn btn-secondary">Avbryt</button>
-          <button @click="saveEvent" :disabled="savingEvent" class="btn btn-primary">
+          <button @click="saveEvent" :disabled="savingEvent" class="btn btn-confirm">
             {{ savingEvent ? 'Lagrer...' : 'Lagre' }}
           </button>
         </div>
@@ -626,9 +672,9 @@
             </select>
           </div>
         </div>
-        <div class="modal-footer">
+        <div class="modal-footer modal-footer-centered">
           <button @click="showBookingModal = false" class="btn btn-secondary">Lukk</button>
-          <button @click="saveBooking" :disabled="savingBooking" class="btn btn-primary">
+          <button @click="saveBooking" :disabled="savingBooking" class="btn btn-confirm">
             {{ savingBooking ? 'Lagrer...' : 'Lagre endringer' }}
           </button>
         </div>
@@ -654,6 +700,7 @@ export default {
       error: null,
       supabase: null,
       resellerId: null,
+      companyId: null,
 
       // Tabs
       activeTab: 'settings',
@@ -665,7 +712,10 @@ export default {
       events: [],
       bookings: [],
       allLocations: [],
+      companyLocations: [],
       selectedLocations: [],
+      colleagues: [],
+      selectedCcResellers: [],
 
       // Filters & Search - Events
       eventsSearch: '',
@@ -723,6 +773,7 @@ export default {
       savingException: false,
       savingEvent: false,
       savingBooking: false,
+      savingCcResellers: false,
 
       // Constants
       allDays: [
@@ -758,6 +809,12 @@ export default {
 
     activeTabData() {
       return this.tabs.find(t => t.id === this.activeTab) || this.tabs[0]
+    },
+
+    // Filter out expired exceptions (end_datetime < now)
+    activeExceptions() {
+      const now = new Date()
+      return this.exceptions.filter(e => new Date(e.end_datetime) >= now)
     },
 
     uniqueEventLocations() {
@@ -892,10 +949,10 @@ export default {
           return
         }
 
-        // Get reseller ID
+        // Get reseller ID and company_id
         const { data: reseller, error: resellerError } = await this.supabase
           .from('resellers')
-          .select('id')
+          .select('id, company_id')
           .eq('auth_id', user.id)
           .single()
 
@@ -905,6 +962,7 @@ export default {
         }
 
         this.resellerId = reseller.id
+        this.companyId = reseller.company_id
 
         // Load all data in parallel
         await Promise.all([
@@ -912,7 +970,8 @@ export default {
           this.loadExceptions(),
           this.loadEvents(),
           this.loadBookings(),
-          this.loadLocations()
+          this.loadLocations(),
+          this.loadColleagues()
         ])
 
       } catch (err) {
@@ -1068,14 +1127,70 @@ export default {
     },
 
     async loadLocations() {
-      const { data, error } = await this.supabase
+      // Load all locations (for fallback)
+      const { data: allLocs } = await this.supabase
         .from('locations')
         .select('id, location_name')
         .eq('country_code', 'NO')
         .order('location_name')
 
+      this.allLocations = allLocs || []
+
+      // Load locations linked to reseller's company via locations_companies junction
+      if (this.companyId) {
+        const { data: companyLocs } = await this.supabase
+          .from('locations_companies')
+          .select('location_id, locations!inner(id, location_name)')
+          .eq('company_id', this.companyId)
+
+        if (companyLocs && companyLocs.length > 0) {
+          this.companyLocations = companyLocs.map(lc => lc.locations).sort((a, b) =>
+            a.location_name.localeCompare(b.location_name)
+          )
+        } else {
+          // Fallback to all NO locations if no company-specific locations
+          this.companyLocations = this.allLocations
+        }
+      } else {
+        this.companyLocations = this.allLocations
+      }
+    },
+
+    async loadColleagues() {
+      if (!this.companyId) return
+
+      // Load other resellers in the same company (excluding self)
+      const { data, error } = await this.supabase
+        .from('resellers')
+        .select('id, first_name, last_name, email')
+        .eq('company_id', this.companyId)
+        .neq('id', this.resellerId)
+        .eq('active', true)
+        .order('first_name')
+
       if (!error) {
-        this.allLocations = data || []
+        this.colleagues = data || []
+      }
+
+      // Load current CC selections for this reseller's availability
+      if (this.availability) {
+        await this.loadCcResellers()
+      }
+    },
+
+    async loadCcResellers() {
+      // We need to load CC resellers from events_cc_resellers
+      // For now, we'll store a "default" CC list on the availability level
+      // This can be enhanced later to be per-event
+      const { data } = await this.supabase
+        .from('events_cc_resellers')
+        .select('reseller_id')
+        .in('event_id', this.events.map(e => e.id))
+
+      if (data) {
+        // Get unique reseller IDs that are CC'd on any of this reseller's events
+        const ccIds = [...new Set(data.map(d => d.reseller_id))]
+        this.selectedCcResellers = ccIds
       }
     },
 
@@ -1204,12 +1319,79 @@ export default {
       return this.selectedLocations.includes(locationId)
     },
 
+    isDefaultLocation(locationId) {
+      // Check if this is the default_location_id from availability
+      return this.availability?.default_location_id === locationId
+    },
+
     toggleLocation(locationId) {
+      // Don't allow toggling the default location
+      if (this.isDefaultLocation(locationId)) return
+
       const index = this.selectedLocations.indexOf(locationId)
       if (index > -1) {
         this.selectedLocations.splice(index, 1)
       } else {
         this.selectedLocations.push(locationId)
+      }
+    },
+
+    // CC Colleagues methods
+    isColleagueSelected(resellerId) {
+      return this.selectedCcResellers.includes(resellerId)
+    },
+
+    toggleColleague(resellerId) {
+      const index = this.selectedCcResellers.indexOf(resellerId)
+      if (index > -1) {
+        this.selectedCcResellers.splice(index, 1)
+      } else {
+        this.selectedCcResellers.push(resellerId)
+      }
+    },
+
+    async saveCcResellers() {
+      this.savingCcResellers = true
+      try {
+        // Get all event IDs for this reseller
+        const eventIds = this.events.map(e => e.id)
+
+        if (eventIds.length === 0) {
+          alert('Du har ingen events å knytte kollegaer til ennå.')
+          return
+        }
+
+        // Delete existing CC entries for these events
+        await this.supabase
+          .from('events_cc_resellers')
+          .delete()
+          .in('event_id', eventIds)
+
+        // Insert new CC entries for all selected colleagues on all events
+        if (this.selectedCcResellers.length > 0) {
+          const inserts = []
+          for (const eventId of eventIds) {
+            for (const resellerId of this.selectedCcResellers) {
+              inserts.push({
+                event_id: eventId,
+                reseller_id: resellerId
+              })
+            }
+          }
+
+          const { error } = await this.supabase
+            .from('events_cc_resellers')
+            .insert(inserts)
+
+          if (error) throw error
+        }
+
+        alert('CC-kollegaer lagret!')
+      } catch (err) {
+        console.error('reseller_portal: Error saving CC resellers:', err)
+        alert('Kunne ikke lagre CC-valg')
+      } finally {
+        this.savingCcResellers = false
       }
     },
 
@@ -1463,7 +1645,8 @@ export default {
 
 .reseller-events-container {
   --color-primary: #000000;
-  --color-accent: #FF6B00;
+  --color-accent: #FF6B35;
+  accent-color: #FF6B35;
   --color-white: #FFFFFF;
   --color-gray-50: #FAFAFA;
   --color-gray-100: #F5F5F5;
@@ -1577,6 +1760,10 @@ export default {
 
 .tab-panel { padding: var(--spacing-md) 0; }
 
+/* 4-box grid layout for settings */
+.settings-grid-4 { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--spacing-md); }
+@media (max-width: 991px) { .settings-grid-4 { grid-template-columns: 1fr; } }
+
 .settings-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--spacing-md); }
 @media (max-width: 991px) { .settings-grid { grid-template-columns: 1fr; } }
 
@@ -1609,6 +1796,24 @@ export default {
 
 .location-checkbox:hover { background: var(--color-gray-50); }
 .location-checkbox input[type="checkbox"] { accent-color: var(--color-accent); }
+.location-checkbox.locked { background: var(--color-gray-100); }
+.location-checkbox.locked input[type="checkbox"] { cursor: not-allowed; }
+.locked-badge { font-size: 10px; background: var(--color-accent); color: white; padding: 2px 6px; border-radius: 4px; margin-left: 6px; }
+
+/* Colleagues list styling */
+.colleagues-list {
+  display: flex; flex-direction: column;
+  gap: var(--spacing-xs); margin-bottom: var(--spacing-md); max-height: 200px;
+  overflow-y: auto; padding: var(--spacing-xs); border: 1px solid var(--color-gray-200); border-radius: var(--radius-md);
+}
+.colleague-checkbox {
+  display: flex; align-items: center; gap: var(--spacing-xs); cursor: pointer;
+  font-size: 14px; padding: var(--spacing-xs); border-radius: var(--radius-sm); transition: var(--transition);
+}
+.colleague-checkbox:hover { background: var(--color-gray-50); }
+.colleague-checkbox input[type="checkbox"] { accent-color: var(--color-accent); }
+.colleague-checkbox .checkbox-label { display: flex; flex-direction: column; gap: 2px; }
+.colleague-email { font-size: 12px; color: var(--color-gray-500); }
 
 .exceptions-list { display: flex; flex-direction: column; gap: var(--spacing-xs); margin-bottom: var(--spacing-md); }
 .exception-item { display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-sm); background: var(--color-gray-50); border-radius: var(--radius-md); }
@@ -1668,6 +1873,8 @@ export default {
 .btn:disabled { opacity: 0.6; cursor: not-allowed; }
 .btn-primary { background: var(--color-accent); color: var(--color-white); }
 .btn-primary:hover:not(:disabled) { background: #E55A00; transform: translateY(-1px); }
+.btn-confirm { background: var(--color-primary); color: var(--color-white); }
+.btn-confirm:hover:not(:disabled) { background: #333; transform: translateY(-1px); }
 .btn-secondary { background: var(--color-white); border: 2px solid var(--color-gray-300); color: var(--color-primary); }
 .btn-secondary:hover:not(:disabled) { border-color: var(--color-accent); color: var(--color-accent); }
 .btn-small { padding: var(--spacing-xs) var(--spacing-sm); font-size: 13px; }
@@ -1683,15 +1890,33 @@ export default {
 .modal-close:hover { color: var(--color-primary); }
 .modal-body { padding: var(--spacing-md); }
 .modal-footer { display: flex; justify-content: flex-end; gap: var(--spacing-sm); padding: var(--spacing-md); border-top: 1px solid var(--color-gray-200); }
+.modal-footer-centered { justify-content: center; }
 
-.form-group { margin-bottom: var(--spacing-md); }
-.form-group label { display: block; margin-bottom: var(--spacing-xs); font-weight: 500; font-size: 14px; color: var(--color-gray-700); }
+.form-group { margin-bottom: var(--spacing-md); text-align: center; }
+.form-group label { display: block; margin-bottom: var(--spacing-xs); font-weight: 500; font-size: 14px; color: var(--color-gray-700); text-align: center; }
 .form-input, .form-select, .form-textarea { width: 100%; padding: var(--spacing-sm); border: 2px solid var(--color-gray-300); border-radius: var(--radius-md); font-size: 15px; transition: var(--transition); font-family: inherit; }
 .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: var(--color-accent); }
-.form-input-small { max-width: 120px; }
+.form-input-small { width: 100%; max-width: 100%; }
+
+/* Date picker orange accent color */
+input[type="datetime-local"]::-webkit-calendar-picker-indicator { cursor: pointer; }
+input[type="datetime-local"]:focus { border-color: var(--color-accent); }
+input[type="date"]:focus { border-color: var(--color-accent); }
+
+/* Override browser default blue selection */
+::selection { background: rgba(255, 107, 0, 0.3); }
+::-moz-selection { background: rgba(255, 107, 0, 0.3); }
 .form-textarea { resize: vertical; min-height: 80px; }
-.toggle-label { display: flex !important; align-items: center; gap: var(--spacing-sm); cursor: pointer; }
+.toggle-label { display: flex !important; align-items: center; gap: var(--spacing-sm); cursor: pointer; justify-content: center; }
 .toggle-label input[type="checkbox"] { accent-color: var(--color-accent); width: 18px; height: 18px; }
+
+/* All checkboxes and radio buttons use orange accent */
+input[type="checkbox"], input[type="radio"] { accent-color: #FF6B35; }
+
+/* Date inputs styling */
+input[type="datetime-local"], input[type="date"], input[type="time"] {
+  color-scheme: light;
+}
 
 .checkbox-grid { display: flex; flex-wrap: wrap; gap: var(--spacing-xs); }
 .day-checkbox, .hour-checkbox { display: flex; align-items: center; gap: 6px; padding: var(--spacing-xs) var(--spacing-sm); background: var(--color-gray-50); border-radius: var(--radius-sm); cursor: pointer; font-size: 14px; transition: var(--transition); }
