@@ -2,8 +2,8 @@
   <div class="reseller-events-container">
     <!-- Header -->
     <header class="page-header">
-      <h1 class="page-title">Events & Bookinger</h1>
-      <p class="page-subtitle">Administrer din tilgjengelighet, events og bookinger</p>
+      <h1 class="page-title centered">Events & Bookinger</h1>
+      <p class="page-subtitle centered">Administrer din tilgjengelighet, events og bookinger</p>
     </header>
 
     <!-- Loading State -->
@@ -257,8 +257,8 @@
             </div>
           </div>
 
-          <!-- Events Table -->
-          <div class="table-container">
+          <!-- Events Table (Desktop) -->
+          <div class="table-container desktop-only">
             <table class="data-table">
               <thead>
                 <tr>
@@ -297,6 +297,36 @@
                 </tr>
               </tbody>
             </table>
+          </div>
+
+          <!-- Events Cards (Mobile) -->
+          <div class="cards-container mobile-only">
+            <div v-if="filteredEvents.length === 0" class="empty-state">
+              <p>Ingen events funnet</p>
+            </div>
+            <div v-for="event in paginatedEvents" :key="event.id" class="data-card">
+              <div class="card-header">
+                <span class="card-date">{{ formatEventDateTime(event.start_datetime, event.end_datetime) }}</span>
+                <span :class="['status-badge', event.inactive ? 'status-inactive' : 'status-active']">
+                  {{ event.inactive ? 'Inaktiv' : 'Aktiv' }}
+                </span>
+              </div>
+              <div class="card-body">
+                <div class="card-row">
+                  <span class="card-label">Adresse:</span>
+                  <span class="card-value">{{ event.override_address || event.default_address || 'Ikke satt' }}</span>
+                </div>
+                <div class="card-row" v-if="event.location_name">
+                  <span class="card-label">Lokasjon:</span>
+                  <span class="card-value">{{ event.location_name }}</span>
+                </div>
+              </div>
+              <div class="card-footer">
+                <button @click="openEventModal(event)" class="btn btn-small btn-full">
+                  Rediger
+                </button>
+              </div>
+            </div>
           </div>
 
           <!-- Pagination -->
@@ -350,8 +380,8 @@
             </div>
           </div>
 
-          <!-- Bookings Table -->
-          <div class="table-container">
+          <!-- Bookings Table (Desktop) -->
+          <div class="table-container desktop-only">
             <table class="data-table">
               <thead>
                 <tr>
@@ -360,7 +390,7 @@
                     <span class="sort-icon">{{ getSortIcon('event_datetime', 'bookings') }}</span>
                   </th>
                   <th>Kunde</th>
-                  <th class="hide-mobile">Kontakt</th>
+                  <th>Kontakt</th>
                   <th>Status</th>
                   <th>Handling</th>
                 </tr>
@@ -376,7 +406,7 @@
                   <td>
                     <span class="customer-name">{{ booking.customer_name || 'Ukjent' }}</span>
                   </td>
-                  <td class="hide-mobile">
+                  <td>
                     <div class="contact-info">
                       <span v-if="booking.customer_email" class="contact-email">{{ booking.customer_email }}</span>
                       <span v-if="booking.customer_phone" class="contact-phone">{{ booking.customer_phone }}</span>
@@ -395,6 +425,40 @@
                 </tr>
               </tbody>
             </table>
+          </div>
+
+          <!-- Bookings Cards (Mobile) -->
+          <div class="cards-container mobile-only">
+            <div v-if="filteredBookings.length === 0" class="empty-state">
+              <p>Ingen bookinger funnet</p>
+            </div>
+            <div v-for="booking in paginatedBookings" :key="booking.id" class="data-card">
+              <div class="card-header">
+                <span class="card-date">{{ formatBookingDateTime(booking.event_datetime) }}</span>
+                <span :class="['status-badge', getBookingStatusClass(booking.status)]">
+                  {{ getBookingStatusText(booking.status) }}
+                </span>
+              </div>
+              <div class="card-body">
+                <div class="card-row">
+                  <span class="card-label">Kunde:</span>
+                  <span class="card-value">{{ booking.customer_name || 'Ukjent' }}</span>
+                </div>
+                <div class="card-row" v-if="booking.customer_email">
+                  <span class="card-label">E-post:</span>
+                  <span class="card-value">{{ booking.customer_email }}</span>
+                </div>
+                <div class="card-row" v-if="booking.customer_phone">
+                  <span class="card-label">Telefon:</span>
+                  <span class="card-value">{{ booking.customer_phone }}</span>
+                </div>
+              </div>
+              <div class="card-footer">
+                <button @click="openBookingModal(booking)" class="btn btn-small btn-full">
+                  Detaljer
+                </button>
+              </div>
+            </div>
           </div>
 
           <!-- Pagination -->
@@ -701,6 +765,7 @@ export default {
       supabase: null,
       resellerId: null,
       companyId: null,
+      realtimeChannel: null,
 
       // Tabs
       activeTab: 'settings',
@@ -928,6 +993,14 @@ export default {
   async mounted() {
     this.initSupabase()
     await this.loadData()
+    this.setupRealtimeSubscriptions()
+  },
+
+  beforeUnmount() {
+    // Cleanup realtime subscriptions
+    if (this.realtimeChannel) {
+      this.supabase.removeChannel(this.realtimeChannel)
+    }
   },
 
   methods: {
@@ -935,6 +1008,69 @@ export default {
       const supabaseUrl = this.content?.supabaseUrl || 'https://prjefvmijalarmbxytjj.supabase.co'
       const supabaseKey = this.content?.supabaseAnonKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InByamVmdm1pamFsYXJtYnh5dGpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzODY1MjQsImV4cCI6MjA3Njk2MjUyNH0.4Czz_OjQIvmMDrz_lckxUcX3MUEu8O_WiDnP0q_6VWQ'
       this.supabase = createClient(supabaseUrl, supabaseKey)
+    },
+
+    setupRealtimeSubscriptions() {
+      if (!this.supabase || !this.resellerId) return
+
+      // Create a single channel for all subscriptions
+      this.realtimeChannel = this.supabase
+        .channel('reseller-portal-realtime')
+        // Listen to events table changes
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'events'
+          },
+          (payload) => {
+            console.log('realtime: events changed', payload.eventType)
+            this.loadEvents()
+          }
+        )
+        // Listen to bookings table changes
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'bookings'
+          },
+          (payload) => {
+            console.log('realtime: bookings changed', payload.eventType)
+            this.loadBookings()
+          }
+        )
+        // Listen to exceptions table changes
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'booking_availability_exceptions'
+          },
+          (payload) => {
+            console.log('realtime: exceptions changed', payload.eventType)
+            this.loadExceptions()
+          }
+        )
+        // Listen to availability changes (for settings tab)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'booking_availability'
+          },
+          (payload) => {
+            console.log('realtime: availability changed', payload.eventType)
+            this.loadAvailability()
+          }
+        )
+        .subscribe((status) => {
+          console.log('realtime: subscription status', status)
+        })
     },
 
     async loadData() {
@@ -1691,9 +1827,10 @@ export default {
   box-sizing: border-box;
 }
 
-.page-header { margin-bottom: var(--spacing-lg); }
+.page-header { margin-bottom: var(--spacing-lg); text-align: center; }
 .page-title { font-size: 28px; font-weight: 700; margin: 0 0 var(--spacing-xs); }
 .page-subtitle { font-size: 16px; color: var(--color-gray-500); margin: 0; }
+.centered { text-align: center; }
 
 .loading-container, .error-container {
   display: flex; flex-direction: column; align-items: center;
@@ -1829,13 +1966,28 @@ export default {
 .search-input:focus { outline: none; border-color: var(--color-accent); }
 .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 16px; pointer-events: none; }
 .filter-group { display: flex; gap: var(--spacing-sm); }
-.filter-select { padding: var(--spacing-sm) var(--spacing-md); border: 2px solid var(--color-gray-300); border-radius: var(--radius-md); font-size: 14px; background: var(--color-white); cursor: pointer; min-width: 140px; }
+.filter-select {
+  padding: var(--spacing-sm) var(--spacing-md);
+  padding-right: 32px; /* Mer plass for pilen, men ikke for mye */
+  border: 2px solid var(--color-gray-300);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  background: var(--color-white);
+  cursor: pointer;
+  min-width: 140px;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23737373' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
 .filter-select:focus { outline: none; border-color: var(--color-accent); }
 
 @media (max-width: 767px) {
   .filters-bar { flex-direction: column; }
-  .filter-group { flex-wrap: wrap; }
-  .filter-select { flex: 1; min-width: 100px; }
+  .filter-group { flex-direction: column; width: 100%; }
+  .filter-select { width: 100%; min-width: unset; }
 }
 
 .table-container { overflow-x: auto; border: 1px solid var(--color-gray-200); border-radius: var(--radius-lg); }
@@ -1936,4 +2088,77 @@ input[type="datetime-local"], input[type="date"], input[type="time"] {
 
 .empty-state { text-align: center; padding: var(--spacing-lg); color: var(--color-gray-500); }
 .empty-state p { margin: 0 0 var(--spacing-md); }
+
+/* Desktop/Mobile visibility */
+.desktop-only { display: block; }
+.mobile-only { display: none; }
+
+@media (max-width: 767px) {
+  .desktop-only { display: none !important; }
+  .mobile-only { display: block !important; }
+}
+
+/* Mobile Cards Styling */
+.cards-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.data-card {
+  background: var(--color-white);
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.data-card .card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-sm);
+  background: var(--color-gray-50);
+  border-bottom: 1px solid var(--color-gray-100);
+}
+
+.data-card .card-date {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.data-card .card-body {
+  padding: var(--spacing-sm);
+}
+
+.data-card .card-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--color-gray-100);
+  font-size: 14px;
+}
+
+.data-card .card-row:last-child {
+  border-bottom: none;
+}
+
+.data-card .card-label {
+  color: var(--color-gray-500);
+  font-weight: 500;
+}
+
+.data-card .card-value {
+  text-align: right;
+  word-break: break-word;
+  max-width: 60%;
+}
+
+.data-card .card-footer {
+  padding: var(--spacing-sm);
+  border-top: 1px solid var(--color-gray-100);
+}
+
+.btn-full {
+  width: 100%;
+}
 </style>
