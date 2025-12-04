@@ -915,14 +915,11 @@ export default {
         result = result.filter(e => e.location_name === this.eventsLocationFilter)
       }
 
-      // Sort
+      // Sort - always by start_datetime ascending (earliest first)
       result.sort((a, b) => {
-        const aVal = a[this.eventsSortField]
-        const bVal = b[this.eventsSortField]
-        const dir = this.eventsSortDir === 'asc' ? 1 : -1
-        if (aVal < bVal) return -1 * dir
-        if (aVal > bVal) return 1 * dir
-        return 0
+        const aDate = new Date(a.start_datetime)
+        const bDate = new Date(b.start_datetime)
+        return aDate.getTime() - bDate.getTime()
       })
 
       return result
@@ -967,14 +964,11 @@ export default {
         result = result.filter(b => new Date(b.event_datetime) <= now)
       }
 
-      // Sort
+      // Sort - by event_datetime ascending (earliest first)
       result.sort((a, b) => {
-        const aVal = a[this.bookingsSortField]
-        const bVal = b[this.bookingsSortField]
-        const dir = this.bookingsSortDir === 'asc' ? 1 : -1
-        if (aVal < bVal) return -1 * dir
-        if (aVal > bVal) return 1 * dir
-        return 0
+        const aDate = new Date(a.event_datetime)
+        const bDate = new Date(b.event_datetime)
+        return aDate.getTime() - bDate.getTime()
       })
 
       return result
@@ -1987,7 +1981,9 @@ export default {
 @media (max-width: 767px) {
   .filters-bar { flex-direction: column; }
   .filter-group { flex-direction: column; width: 100%; }
-  .filter-select { width: 100%; min-width: unset; }
+  .filter-select { width: 100%; min-width: unset; font-size: 16px; } /* 16px prevents iOS zoom on focus */
+  .search-input { font-size: 16px; } /* 16px prevents iOS zoom on focus */
+  .search-box { min-width: unset; }
 }
 
 .table-container { overflow-x: auto; border: 1px solid var(--color-gray-200); border-radius: var(--radius-lg); }
@@ -2115,15 +2111,20 @@ input[type="datetime-local"], input[type="date"], input[type="time"] {
 .data-card .card-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: var(--spacing-xs);
   padding: var(--spacing-sm);
   background: var(--color-gray-50);
   border-bottom: 1px solid var(--color-gray-100);
+  flex-wrap: wrap;
 }
 
 .data-card .card-date {
   font-weight: 600;
-  font-size: 14px;
+  font-size: 13px;
+  line-height: 1.4;
+  flex: 1;
+  min-width: 0;
 }
 
 .data-card .card-body {
@@ -2132,8 +2133,9 @@ input[type="datetime-local"], input[type="date"], input[type="time"] {
 
 .data-card .card-row {
   display: flex;
-  justify-content: space-between;
-  padding: 6px 0;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 0;
   border-bottom: 1px solid var(--color-gray-100);
   font-size: 14px;
 }
@@ -2145,12 +2147,12 @@ input[type="datetime-local"], input[type="date"], input[type="time"] {
 .data-card .card-label {
   color: var(--color-gray-500);
   font-weight: 500;
+  font-size: 12px;
 }
 
 .data-card .card-value {
-  text-align: right;
   word-break: break-word;
-  max-width: 60%;
+  line-height: 1.4;
 }
 
 .data-card .card-footer {
