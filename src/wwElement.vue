@@ -916,13 +916,11 @@ export default {
       }
 
       // Sort - always by start_datetime ascending (earliest first)
-      result.sort((a, b) => {
-        const aDate = new Date(a.start_datetime)
-        const bDate = new Date(b.start_datetime)
-        return aDate.getTime() - bDate.getTime()
+      return [...result].sort((a, b) => {
+        const aTime = new Date(a.start_datetime).getTime()
+        const bTime = new Date(b.start_datetime).getTime()
+        return aTime - bTime
       })
-
-      return result
     },
 
     paginatedEvents() {
@@ -965,13 +963,11 @@ export default {
       }
 
       // Sort - by event_datetime ascending (earliest first)
-      result.sort((a, b) => {
-        const aDate = new Date(a.event_datetime)
-        const bDate = new Date(b.event_datetime)
-        return aDate.getTime() - bDate.getTime()
+      return [...result].sort((a, b) => {
+        const aTime = new Date(a.event_datetime).getTime()
+        const bTime = new Date(b.event_datetime).getTime()
+        return aTime - bTime
       })
-
-      return result
     },
 
     paginatedBookings() {
@@ -1962,7 +1958,7 @@ export default {
 .filter-group { display: flex; gap: var(--spacing-sm); }
 .filter-select {
   padding: var(--spacing-sm) var(--spacing-md);
-  padding-right: 32px; /* Mer plass for pilen, men ikke for mye */
+  padding-right: 36px;
   border: 2px solid var(--color-gray-300);
   border-radius: var(--radius-md);
   font-size: 14px;
@@ -1972,11 +1968,15 @@ export default {
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23737373' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23FF6B35' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 10px center;
+  background-position: right 12px center;
+  transition: var(--transition);
 }
-.filter-select:focus { outline: none; border-color: var(--color-accent); }
+.filter-select:hover { border-color: var(--color-gray-400); }
+.filter-select:focus { outline: none; border-color: var(--color-accent); box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1); }
+.filter-select option { padding: 8px; }
+.filter-select option:checked { background: rgba(255, 107, 53, 0.1); color: var(--color-accent); }
 
 @media (max-width: 767px) {
   .filters-bar { flex-direction: column; }
@@ -2052,14 +2052,39 @@ export default {
 .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: var(--color-accent); }
 .form-input-small { width: 100%; max-width: 100%; }
 
-/* Date picker orange accent color */
-input[type="datetime-local"]::-webkit-calendar-picker-indicator { cursor: pointer; }
-input[type="datetime-local"]:focus { border-color: var(--color-accent); }
-input[type="date"]:focus { border-color: var(--color-accent); }
+/* Date picker styling - orange accent */
+input[type="datetime-local"],
+input[type="date"],
+input[type="time"] {
+  accent-color: #FF6B35;
+  color-scheme: light;
+}
+
+input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  filter: hue-rotate(340deg) saturate(1.5);
+  opacity: 0.8;
+}
+
+input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover,
+input[type="date"]::-webkit-calendar-picker-indicator:hover,
+input[type="time"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+input[type="datetime-local"]:focus,
+input[type="date"]:focus,
+input[type="time"]:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+}
 
 /* Override browser default blue selection */
-::selection { background: rgba(255, 107, 0, 0.3); }
-::-moz-selection { background: rgba(255, 107, 0, 0.3); }
+::selection { background: rgba(255, 107, 53, 0.3); }
+::-moz-selection { background: rgba(255, 107, 53, 0.3); }
+
 .form-textarea { resize: vertical; min-height: 80px; }
 .toggle-label { display: flex !important; align-items: center; gap: var(--spacing-sm); cursor: pointer; justify-content: center; }
 .toggle-label input[type="checkbox"] { accent-color: var(--color-accent); width: 18px; height: 18px; }
@@ -2067,10 +2092,20 @@ input[type="date"]:focus { border-color: var(--color-accent); }
 /* All checkboxes and radio buttons use orange accent */
 input[type="checkbox"], input[type="radio"] { accent-color: #FF6B35; }
 
-/* Date inputs styling */
-input[type="datetime-local"], input[type="date"], input[type="time"] {
-  color-scheme: light;
+/* Form select in modals - orange styling */
+.form-select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23FF6B35' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+  cursor: pointer;
 }
+.form-select:hover { border-color: var(--color-gray-400); }
+.form-select:focus { box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1); }
+.form-select option:checked { background: rgba(255, 107, 53, 0.1); }
 
 .checkbox-grid { display: flex; flex-wrap: wrap; gap: var(--spacing-xs); }
 .day-checkbox, .hour-checkbox { display: flex; align-items: center; gap: 6px; padding: var(--spacing-xs) var(--spacing-sm); background: var(--color-gray-50); border-radius: var(--radius-sm); cursor: pointer; font-size: 14px; transition: var(--transition); }
