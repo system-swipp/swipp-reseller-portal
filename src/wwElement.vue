@@ -1991,8 +1991,18 @@ export default {
 }
 .filter-select:hover { border-color: var(--color-gray-400); }
 .filter-select:focus { outline: none; border-color: var(--color-accent); box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1); }
+/* Note: Native dropdown menu styling is limited by browser/OS */
 .filter-select option { padding: 8px; }
-.filter-select option:checked { background: rgba(255, 107, 53, 0.1); color: var(--color-accent); }
+.filter-select option:checked,
+.filter-select option:hover {
+  background: rgba(255, 107, 53, 0.2) !important;
+  background-color: rgba(255, 107, 53, 0.2) !important;
+  color: #FF6B35;
+}
+/* Firefox specific */
+@-moz-document url-prefix() {
+  .filter-select option:checked { background: #FF6B35 !important; color: white !important; }
+}
 
 @media (max-width: 767px) {
   .filters-bar { flex-direction: column; }
@@ -2069,25 +2079,31 @@ export default {
 .form-input-small { width: 100%; max-width: 100%; }
 
 /* Date picker styling - orange accent */
+/* Note: The actual calendar popup is controlled by the browser/OS and cannot be fully styled */
+/* We style what we can: the input field, focus states, and calendar icon */
 input[type="datetime-local"],
 input[type="date"],
 input[type="time"] {
   accent-color: #FF6B35;
   color-scheme: light;
+  /* Chrome 93+ supports these for some color hints */
+  --date-picker-highlight-color: #FF6B35;
 }
 
 input[type="datetime-local"]::-webkit-calendar-picker-indicator,
 input[type="date"]::-webkit-calendar-picker-indicator,
 input[type="time"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
-  filter: hue-rotate(340deg) saturate(1.5);
-  opacity: 0.8;
+  /* Make the calendar icon orange-tinted */
+  filter: sepia(100%) saturate(300%) hue-rotate(-10deg) brightness(0.9);
+  opacity: 0.9;
 }
 
 input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover,
 input[type="date"]::-webkit-calendar-picker-indicator:hover,
 input[type="time"]::-webkit-calendar-picker-indicator:hover {
   opacity: 1;
+  filter: sepia(100%) saturate(400%) hue-rotate(-10deg) brightness(1);
 }
 
 input[type="datetime-local"]:focus,
@@ -2095,6 +2111,13 @@ input[type="date"]:focus,
 input[type="time"]:focus {
   border-color: var(--color-accent);
   box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1);
+}
+
+/* Firefox date input styling */
+input[type="datetime-local"]::-moz-focus-inner,
+input[type="date"]::-moz-focus-inner,
+input[type="time"]::-moz-focus-inner {
+  border-color: #FF6B35;
 }
 
 /* Override browser default blue selection */
