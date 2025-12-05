@@ -258,14 +258,11 @@
           </div>
 
           <!-- Events Table (Desktop) -->
-          <div class="table-container desktop-only">
+          <div v-if="!isMobile" class="table-container">
             <table class="data-table">
               <thead>
                 <tr>
-                  <th @click="sortEvents('start_datetime')" class="sortable">
-                    Dato/Tid
-                    <span class="sort-icon">{{ getSortIcon('start_datetime', 'events') }}</span>
-                  </th>
+                  <th>Dato/Tid</th>
                   <th>Adresse</th>
                   <th>Lokasjon</th>
                   <th>Status</th>
@@ -276,7 +273,7 @@
                 <tr v-if="filteredEvents.length === 0">
                   <td colspan="5" class="empty-table">Ingen events funnet</td>
                 </tr>
-                <tr v-for="event in paginatedEvents" :key="event.id">
+                <tr v-for="event in paginatedEvents" :key="'evt-' + event.id">
                   <td class="date-cell">
                     {{ formatEventDateTime(event.start_datetime, event.end_datetime) }}
                   </td>
@@ -300,11 +297,11 @@
           </div>
 
           <!-- Events Cards (Mobile) -->
-          <div class="cards-container mobile-only">
+          <div v-else class="cards-container">
             <div v-if="filteredEvents.length === 0" class="empty-state">
               <p>Ingen events funnet</p>
             </div>
-            <div v-for="event in paginatedEvents" :key="event.id" class="data-card">
+            <div v-for="event in paginatedEvents" :key="'evtc-' + event.id" class="data-card">
               <div class="card-header">
                 <span class="card-date">{{ formatEventDateTime(event.start_datetime, event.end_datetime) }}</span>
                 <span :class="['status-badge', event.inactive ? 'status-inactive' : 'status-active']">
@@ -381,14 +378,11 @@
           </div>
 
           <!-- Bookings Table (Desktop) -->
-          <div class="table-container desktop-only">
+          <div v-if="!isMobile" class="table-container">
             <table class="data-table">
               <thead>
                 <tr>
-                  <th @click="sortBookings('event_datetime')" class="sortable">
-                    Dato/Tid
-                    <span class="sort-icon">{{ getSortIcon('event_datetime', 'bookings') }}</span>
-                  </th>
+                  <th>Dato/Tid</th>
                   <th>Kunde</th>
                   <th>Kontakt</th>
                   <th>Status</th>
@@ -399,7 +393,7 @@
                 <tr v-if="filteredBookings.length === 0">
                   <td colspan="5" class="empty-table">Ingen bookinger funnet</td>
                 </tr>
-                <tr v-for="booking in paginatedBookings" :key="booking.id">
+                <tr v-for="booking in paginatedBookings" :key="'bkg-' + booking.id">
                   <td class="date-cell">
                     {{ formatBookingDateTime(booking.event_datetime) }}
                   </td>
@@ -428,11 +422,11 @@
           </div>
 
           <!-- Bookings Cards (Mobile) -->
-          <div class="cards-container mobile-only">
+          <div v-else class="cards-container">
             <div v-if="filteredBookings.length === 0" class="empty-state">
               <p>Ingen bookinger funnet</p>
             </div>
-            <div v-for="booking in paginatedBookings" :key="booking.id" class="data-card">
+            <div v-for="booking in paginatedBookings" :key="'bkgc-' + booking.id" class="data-card">
               <div class="card-header">
                 <span class="card-date">{{ formatBookingDateTime(booking.event_datetime) }}</span>
                 <span :class="['status-badge', getBookingStatusClass(booking.status)]">
@@ -766,6 +760,7 @@ export default {
       resellerId: null,
       companyId: null,
       realtimeChannel: null,
+      isMobile: false,
 
       // Tabs
       activeTab: 'settings',
@@ -981,6 +976,10 @@ export default {
   },
 
   async mounted() {
+    // Setup responsive detection
+    this.handleResize()
+    window.addEventListener('resize', this.handleResize)
+
     this.initSupabase()
     await this.loadData()
     this.setupRealtimeSubscriptions()
@@ -991,9 +990,14 @@ export default {
     if (this.realtimeChannel) {
       this.supabase.removeChannel(this.realtimeChannel)
     }
+    // Cleanup resize listener
+    window.removeEventListener('resize', this.handleResize)
   },
 
   methods: {
+    handleResize() {
+      this.isMobile = window.innerWidth < 768
+    },
     initSupabase() {
       const supabaseUrl = this.content?.supabaseUrl || 'https://prjefvmijalarmbxytjj.supabase.co'
       const supabaseKey = this.content?.supabaseAnonKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InByamVmdm1pamFsYXJtYnh5dGpqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzODY1MjQsImV4cCI6MjA3Njk2MjUyNH0.4Czz_OjQIvmMDrz_lckxUcX3MUEu8O_WiDnP0q_6VWQ'
@@ -2138,14 +2142,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: #FF6B35; }
 .empty-state { text-align: center; padding: var(--spacing-lg); color: var(--color-gray-500); }
 .empty-state p { margin: 0 0 var(--spacing-md); }
 
-/* Desktop/Mobile visibility */
-.desktop-only { display: block; }
-.mobile-only { display: none; }
-
-@media (max-width: 767px) {
-  .desktop-only { display: none !important; }
-  .mobile-only { display: block !important; }
-}
+/* Note: Desktop/Mobile visibility now controlled via v-if="!isMobile" / v-else */
 
 /* Mobile Cards Styling */
 .cards-container {
