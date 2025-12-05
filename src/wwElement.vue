@@ -1140,6 +1140,18 @@ export default {
     },
 
     async loadEvents() {
+      // First get the availability_id for this reseller
+      const { data: availData } = await this.supabase
+        .from('booking_availability')
+        .select('id')
+        .eq('reseller_id', this.resellerId)
+        .single()
+
+      if (!availData) {
+        this.events = []
+        return
+      }
+
       const { data, error } = await this.supabase
         .from('events')
         .select(`
@@ -1149,13 +1161,13 @@ export default {
           capacity,
           override_address,
           inactive,
-          booking_availability!inner (
+          booking_availability_id,
+          booking_availability (
             default_address,
-            default_location_id,
-            reseller_id
+            default_location_id
           )
         `)
-        .eq('booking_availability.reseller_id', this.resellerId)
+        .eq('booking_availability_id', availData.id)
         .gte('start_datetime', new Date().toISOString())
         .order('start_datetime', { ascending: true })
 
